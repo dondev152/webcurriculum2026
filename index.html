@@ -7,7 +7,7 @@
     <style>
         /* Variáveis de Cores - Tema Azul e Branco */
         :root {
-            --primary-color: #003366;
+            --primary-color: #0080ff;
             --secondary-color: #0073e6;
             --bg-color: #f4f8fc;
             --text-color: #333333;
@@ -29,7 +29,7 @@
             overflow-x: hidden;
         }
 
-        /* CABEÇALHO COM FOTO */
+        /* CABEÇALHO COM FOTO E WIDGET */
         header {
             background-color: var(--primary-color);
             color: white;
@@ -45,6 +45,7 @@
         }
 
         .header-content {
+            position: relative; /* Adicionado para prender o widget nas bordas deste container */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -52,6 +53,11 @@
             max-width: 1200px;
             width: 100%;
             padding: 0 20px;
+        }
+
+        .profile-container {
+            position: relative;
+            display: inline-block;
         }
 
         .profile-pic {
@@ -63,10 +69,52 @@
             border: 3px solid rgba(255, 255, 255, 0.8);
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.3);
             transition: transform 0.3s ease;
+            position: relative;
+            z-index: 2;
         }
 
-        .profile-pic:hover {
+        .profile-container:hover .profile-pic {
             transform: scale(1.05);
+        }
+
+        /* Widget de Data e Hora posicionado na Borda Direita */
+        .datetime-widget {
+            position: absolute;
+            right: 20px; /* Colado na borda direita */
+            top: 30px; /* Centralizado verticalmente em relação ao cabeçalho */
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 8px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 3;
+            animation: gentleFloat 4s ease-in-out infinite;
+        }
+        
+        .datetime-widget .time {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            letter-spacing: 1px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .datetime-widget .date {
+            font-size: 0.7rem;
+            color: #e0f0ff;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        @keyframes gentleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
         }
 
         .header-text { text-align: left; }
@@ -75,7 +123,7 @@
 
         .container {
             max-width: 1200px;
-            margin: 130px auto 40px;
+            margin: 140px auto 40px; 
             padding: 0 20px;
         }
 
@@ -108,7 +156,7 @@
             margin: 0 auto;
         }
 
-        .date { font-size: 0.85rem; color: #666; font-style: italic; margin-bottom: 10px; display: block; }
+        .date-label { font-size: 0.85rem; color: #666; font-style: italic; margin-bottom: 10px; display: block; } 
 
         .formation-item {
             display: flex;
@@ -186,6 +234,77 @@
         .cert-thumb { width: 100%; height: 140px; object-fit: cover; object-position: top; border-radius: 8px; border: 2px solid #eef2f5; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.1); transition: transform 0.3s ease, border-color 0.3s ease; }
         .cert-thumb:hover { transform: scale(1.05); border-color: var(--secondary-color); box-shadow: 0 6px 15px rgba(0,115,230,0.2); }
         .cert-desc { margin-top: 10px; font-size: 0.9rem; color: #555; font-weight: 500; }
+
+        /* =========================================
+           ESTILOS: MISSÃO, VISÃO E VALORES
+           ========================================= */
+        .mvv-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        .mvv-card {
+            background: linear-gradient(145deg, #ffffff, #f9fbff);
+            border-radius: 12px;
+            padding: 30px 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-top: 5px solid var(--secondary-color);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .mvv-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 115, 230, 0.15);
+        }
+        .mvv-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: inline-block;
+            animation: floatIcon 3s ease-in-out infinite;
+        }
+        .mvv-card h3 {
+            color: var(--primary-color);
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eef2f5;
+            padding-bottom: 10px;
+            width: 100%;
+        }
+        .mvv-card p {
+            color: #555;
+            font-size: 0.95rem;
+            text-align: justify;
+            line-height: 1.6;
+            margin-bottom: 0;
+        }
+        .mvv-card ul {
+            list-style-type: none;
+            padding: 0;
+            text-align: left;
+            width: 100%;
+        }
+        .mvv-card ul li {
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            color: #444;
+            position: relative;
+            padding-left: 25px;
+        }
+        .mvv-card ul li::before {
+            content: '🚀';
+            position: absolute;
+            left: 0;
+            top: 1px;
+            font-size: 0.9rem;
+        }
+        @keyframes floatIcon {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
 
         .contact-section { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; text-align: center; border-left: none; }
         .contact-section h2 { color: white; border-bottom: none; }
@@ -276,8 +395,20 @@
             header h1 { font-size: 1.4rem; }
             header p { font-size: 0.85rem; }
             
+            /* Ajuste do widget no mobile: desce para baixo do texto e centraliza */
+            .datetime-widget { 
+                position: relative; 
+                right: auto; 
+                top: auto; 
+                margin-top: 10px;
+                flex-direction: row;
+                gap: 15px;
+                padding: 5px 15px;
+            }
+            .datetime-widget .time { font-size: 1rem; }
+            
             /* Espaço abaixo do cabeçalho fixo */
-            .container { margin-top: 250px; padding: 0 15px; } /* <-- CORREÇÃO FEITA AQUI */
+            .container { margin-top: 250px; padding: 0 15px; } 
             
             /* Seções mais compactas no mobile */
             section { padding: 20px 15px; margin-bottom: 20px; }
@@ -308,10 +439,18 @@
 
     <header>
         <div class="header-content">
-            <img src="foto-perfil.jpeg" alt="Antônio Marcos" class="profile-pic">
+            <div class="profile-container">
+                <img src="foto-perfil.jpeg" alt="Antônio Marcos" class="profile-pic">
+            </div>
+            
             <div class="header-text">
                 <h1>ANTÔNIO MARCOS SILVA MATOS</h1>
                 <p>Desenvolvedor em Formação | 28 anos | Salvador - BA</p>
+            </div>
+
+            <div class="datetime-widget">
+                <span class="time" id="clock">00:00:00</span>
+                <span class="date" id="dateDisplay">DD/MM/AAAA</span>
             </div>
         </div>
     </header>
@@ -329,7 +468,7 @@
             <div class="formation-item">
                 <div class="formation-text">
                     <h3>Tecnólogo em Análise e Desenvolvimento de Sistemas</h3>
-                    <span class="date">Universidade Católica do Salvador (UCsal) | Cursando IVº Semestre (Previsão: 01/2026)</span>
+                    <span class="date-label">Universidade Católica do Salvador (UCsal) | Cursando IVº Semestre (Previsão: 01/2026)</span>
                 </div>
                 
                 <div class="formation-proof">
@@ -345,7 +484,7 @@
             <div class="formation-item">
                 <div class="formation-text">
                     <h3>Ensino Médio Regular</h3>
-                    <span class="date">Concluído em 2016</span>
+                    <span class="date-label">Concluído em 2016</span>
                 </div>
                 
                 <div class="formation-proof">
@@ -368,6 +507,7 @@
                 <span class="skill-tag">Manutenção de Computadores</span>
                 <span class="skill-tag">Banco de Dados</span>
                 <span class="skill-tag">Pacote Office & Windows</span>
+                <span class="skill-tag">Administração e Rotinas Administrativas</span>
             </div>
         </section>
 
@@ -468,20 +608,47 @@
             <h2>Experiência Profissional</h2>
             
             <h3>SEC de Educação – Colégio Est Prof.ª Noêmia Rego</h3>
-            <span class="date">Servente | 01/05/2024 a 14/01/2026</span>
+            <span class="date-label">Servente | 01/05/2024 a 14/01/2026</span>
             <p>Apoio à infraestrutura escolar (laboratórios e secretarias) e gerenciamento de dados de Reconhecimento Facial.</p>
             
             <hr style="margin: 20px 0; border: 1px solid #eef2f5;">
 
             <h3>PRODEB - Processamento de Dados do Estado da Bahia</h3>
-            <span class="date">Recepcionista Administrativo | 20/09/2019 a 05/06/2021</span>
+            <span class="date-label">Recepcionista Administrativo | 20/09/2019 a 05/06/2021</span>
             <p>Atendimento e suporte administrativo em ambiente corporativo de tecnologia.</p>
             
             <hr style="margin: 20px 0; border: 1px solid #eef2f5;">
 
             <h3>Exército Brasileiro – 19º Batalhão de Caçadores</h3>
-            <span class="date">Soldado 1º Classe | 01/03/2018 a 28/02/2019</span>
+            <span class="date-label">Soldado 1º Classe | 01/03/2018 a 28/02/2019</span>
             <p>Formação militar com foco em disciplina, trabalho em equipe e resiliência.</p>
+        </section>
+
+        <section class="cascade">
+            <h2>Meu Propósito</h2>
+            <div class="mvv-container">
+                <div class="mvv-card">
+                    <span class="mvv-icon">🎯</span>
+                    <h3>Missão</h3>
+                    <p>Desenvolver soluções tecnológicas que simplifiquem processos e otimizem recursos. Através da organização e agilidade, busco transformar problemas complexos em sistemas eficientes, acessíveis e livres de burocracia, gerando economia de tempo e esforço para as pessoas e empresas.</p>
+                </div>
+                <div class="mvv-card">
+                    <span class="mvv-icon">🔭</span>
+                    <h3>Visão</h3>
+                    <p>Tornar-me um profissional de tecnologia referência na criação de arquiteturas de software inteligentes e enxutas. Aspiro a atuar em projetos onde a tecnologia seja o principal motor da desburocratização, tornando o dia a dia das instituições mais rápido, automatizado e economicamente sustentável.</p>
+                </div>
+                <div class="mvv-card">
+                    <span class="mvv-icon">💎</span>
+                    <h3>Valores</h3>
+                    <ul>
+                        <li><strong>Organização:</strong> Planejamento e código limpo.</li>
+                        <li><strong>Agilidade:</strong> Rapidez na resolução de problemas.</li>
+                        <li><strong>Economia:</strong> Fazer mais com menos recursos.</li>
+                        <li><strong>Desburocratização:</strong> Eliminar etapas manuais.</li>
+                        <li><strong>Melhoria Contínua:</strong> Mente aberta para aprender.</li>
+                    </ul>
+                </div>
+            </div>
         </section>
 
         <section class="cascade contact-section">
@@ -543,6 +710,24 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            // --- SCRIPT RELÓGIO E DATA (NOVO) ---
+            function updateClock() {
+                const now = new Date();
+                
+                // Formata hora
+                let h = String(now.getHours()).padStart(2, '0');
+                let m = String(now.getMinutes()).padStart(2, '0');
+                let s = String(now.getSeconds()).padStart(2, '0');
+                document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+                
+                // Formata data
+                const options = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
+                let dateStr = now.toLocaleDateString('pt-BR', options).replace('.', '');
+                document.getElementById('dateDisplay').textContent = dateStr;
+            }
+            setInterval(updateClock, 1000);
+            updateClock(); // Chamada inicial
+
             // --- EFEITO CASCATA ---
             const elements = document.querySelectorAll('.cascade');
             const observer = new IntersectionObserver((entries) => {
@@ -635,7 +820,7 @@
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
             const startBtn = document.getElementById('startGameBtn');
-            const restartBtn = document.getElementById('restartGameBtn'); // Pegando o botão novo
+            const restartBtn = document.getElementById('restartGameBtn');
             
             let gameLoopId;
             let isGameOver = false;
@@ -648,7 +833,7 @@
 
             function initGame() {
                 startBtn.style.display = 'none';
-                restartBtn.style.display = 'none'; // Esconde o reiniciar se estava lá
+                restartBtn.style.display = 'none';
                 bugs = [];
                 score = 0;
                 frames = 0;
@@ -665,7 +850,6 @@
                     dev.vy = dev.jumpPower;
                     dev.isJumping = true;
                 } else if (isGameOver) {
-                    // Mantive a opção de pular pelo teclado pra reiniciar caso ele prefira não clicar no botão
                     initGame();
                 }
             }
@@ -674,7 +858,7 @@
             window.addEventListener('keydown', (e) => {
                 if (e.code === 'Space') {
                     if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
-                        e.preventDefault(); // Evita rolar a página (só se não tiver digitando)
+                        e.preventDefault(); 
                         jump();
                     }
                 }
@@ -683,7 +867,7 @@
             canvas.addEventListener('touchstart', (e) => { e.preventDefault(); jump(); }, {passive: false});
 
             startBtn.addEventListener('click', initGame);
-            restartBtn.addEventListener('click', initGame); // Ouvinte para o novo botão!
+            restartBtn.addEventListener('click', initGame);
 
             // Desenho inicial na tela parada
             ctx.fillStyle = "#f8f9fa";
@@ -723,12 +907,12 @@
                 // Lógica dos Bugs
                 for (let i = 0; i < bugs.length; i++) {
                     let bug = bugs[i];
-                    bug.x -= 5 + (score * 0.1); // Aumenta a velocidade com a pontuação
+                    bug.x -= 5 + (score * 0.1); 
 
                     ctx.font = '25px Arial';
                     ctx.fillText('🐛', bug.x, bug.y + 20);
 
-                    // Colisão (Hitbox ajustada)
+                    // Colisão
                     if (dev.x < bug.x + bug.width - 5 &&
                         dev.x + dev.size > bug.x + 5 &&
                         dev.y < bug.y + bug.height - 5 &&
@@ -753,11 +937,9 @@
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     ctx.fillStyle = 'white';
                     ctx.font = 'bold 20px Arial';
-                    // Subi um pouquinho a mensagem para o botão ficar bem centralizado
                     ctx.fillText('💥 Bug encontrado!', canvas.width / 2 - 90, canvas.height / 2 - 20);
                     isPlaying = false;
                     
-                    // Mostra o botão vermelho de reiniciar!
                     restartBtn.style.display = 'block';
                     return;
                 }
