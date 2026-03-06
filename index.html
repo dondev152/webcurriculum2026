@@ -259,6 +259,11 @@
             font-weight: bold;
             cursor: pointer;
             z-index: 10;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .start-game-btn:hover {
+            transform: translate(-50%, -50%) scale(1.05);
+            background-color: #45a049;
         }
 
         /* ==========================================================
@@ -424,7 +429,11 @@
                     </div>
                     <div class="project-info">
                         <h4>Sistema de Atendimento (SysAMCAP)</h4>
-                        <p>Digitalização de formulários de atendimento médico, que antes eram manuscritos. Dados preenchidos e salvos em banco de dados, otimizando o histórico de retornos e a organização .</p>
+                        <p>Digitalização de formulários de atendimento médico, que antes eram manuscritos. Dados preenchidos e salvos em banco de dados, otimizando o histórico de retornos e a organização.</p>
+                        
+                        <a href="sysamcap.html" target="_blank" style="margin-top: 15px; padding: 10px 20px; background-color: var(--secondary-color); color: white; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.3s, background 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-decoration: none;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            💻 Testar Aplicação
+                        </a>
                     </div>
                 </div>
 
@@ -491,6 +500,7 @@
             
             <div class="game-container">
                 <button id="startGameBtn" class="start-game-btn">Iniciar Jogo</button>
+                <button id="restartGameBtn" class="start-game-btn" style="display: none; background-color: #ff4d4d;">Reiniciar Jogo</button>
                 <canvas id="gameCanvas" width="600" height="150"></canvas>
             </div>
         </section>
@@ -545,7 +555,7 @@
             elements.forEach(element => { observer.observe(element); });
 
             // --- FUNÇÃO GENÉRICA PARA MODAIS E CÓPIA ---
-            function setupModal(openBtnId, modalId, closeBtnId, copyBtnId, textId, copyMessage) {
+            function setupModal(openBtnId, modalId, closeBtnId, copyBtnId, textId) {
                 const modal = document.getElementById(modalId);
                 const openBtn = document.getElementById(openBtnId);
                 const closeBtn = document.getElementById(closeBtnId);
@@ -625,6 +635,7 @@
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
             const startBtn = document.getElementById('startGameBtn');
+            const restartBtn = document.getElementById('restartGameBtn'); // Pegando o botão novo
             
             let gameLoopId;
             let isGameOver = false;
@@ -637,6 +648,7 @@
 
             function initGame() {
                 startBtn.style.display = 'none';
+                restartBtn.style.display = 'none'; // Esconde o reiniciar se estava lá
                 bugs = [];
                 score = 0;
                 frames = 0;
@@ -653,6 +665,7 @@
                     dev.vy = dev.jumpPower;
                     dev.isJumping = true;
                 } else if (isGameOver) {
+                    // Mantive a opção de pular pelo teclado pra reiniciar caso ele prefira não clicar no botão
                     initGame();
                 }
             }
@@ -660,14 +673,17 @@
             // Controles
             window.addEventListener('keydown', (e) => {
                 if (e.code === 'Space') {
-                    e.preventDefault(); // Evita rolar a página
-                    jump();
+                    if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                        e.preventDefault(); // Evita rolar a página (só se não tiver digitando)
+                        jump();
+                    }
                 }
             });
             canvas.addEventListener('mousedown', jump);
             canvas.addEventListener('touchstart', (e) => { e.preventDefault(); jump(); }, {passive: false});
 
             startBtn.addEventListener('click', initGame);
+            restartBtn.addEventListener('click', initGame); // Ouvinte para o novo botão!
 
             // Desenho inicial na tela parada
             ctx.fillStyle = "#f8f9fa";
@@ -737,10 +753,12 @@
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     ctx.fillStyle = 'white';
                     ctx.font = 'bold 20px Arial';
-                    ctx.fillText('💥 Bug encontrado!', canvas.width / 2 - 90, canvas.height / 2 - 10);
-                    ctx.font = '16px Arial';
-                    ctx.fillText('Clique ou aperte ESPAÇO para tentar de novo', canvas.width / 2 - 160, canvas.height / 2 + 20);
+                    // Subi um pouquinho a mensagem para o botão ficar bem centralizado
+                    ctx.fillText('💥 Bug encontrado!', canvas.width / 2 - 90, canvas.height / 2 - 20);
                     isPlaying = false;
+                    
+                    // Mostra o botão vermelho de reiniciar!
+                    restartBtn.style.display = 'block';
                     return;
                 }
 
