@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Integrado - AMCAP</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --line-height: 24px;
+            --border-black: 1px solid #000;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* FORÇA MAIÚSCULO VISUALMENTE */
+        input, select, textarea {
+            text-transform: uppercase;
+        }
+
+        /* Oculta calendários/relógios nativos */
+        input[type="date"]::-webkit-inner-spin-button,
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-inner-spin-button,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            display: none;
+            -webkit-appearance: none;
+        }
+        input[type="date"], input[type="time"] { -moz-appearance: textfield; }
+
+        /* --- MENU --- */
+        #menu-selecao {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #0918ed 0%, #f52dc0 100%);
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            z-index: 9999;
+            overflow-y: auto; 
+        }
+        .menu-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+        .card-opcao {
+            background: white;
+            width: 300px;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+            border: 4px solid transparent;
+        }
+        .card-opcao:hover { transform: translateY(-10px); }
+        
+        .card-verde { border-color: #198754; }
+        .card-rosa { border-color: #d63384; }
+
+        .icon-lg { font-size: 50px; margin-bottom: 15px; }
+        .icon-verde { color: #198754; }
+        .icon-rosa { color: #d63384; }
+
+        .badge-count {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 5px 15px;
+            background-color: #f8f9fa;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #555;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+        }
+
+        .btn-db-geral {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            margin-top: 40px;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-db-geral:hover {
+            background: white;
+            color: #1e3c72;
+            transform: scale(1.05);
+        }
+
+        /* --- NOVO: CONTAINER DB E ALERTA --- */
+        #banco-container {
+            position: absolute;
+            top: 20px; right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        @keyframes piscaSeta {
+            0%, 100% { opacity: 1; transform: translateX(0); }
+            50% { opacity: 0.3; transform: translateX(-8px); }
+        }
+
+        .aviso-autorizacao {
+            color: #ffeb3b;
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: piscaSeta 1s infinite;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* --- ESTADO BLOQUEADO --- */
+        .bloqueado {
+            opacity: 0.5;
+            cursor: not-allowed !important;
+            pointer-events: none;
+            filter: grayscale(80%);
+        }
+
+        /* Status do Banco */
+        #db-status {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: white;
+            border: 1px solid white;
+            display: flex; align-items: center; gap: 10px;
+            font-size: 14px; cursor: pointer;
+        }
+        .status-dot { height: 12px; width: 12px; background-color: #ff4444; border-radius: 50%; display: inline-block; }
+        .connected .status-dot { background-color: #00C851; box-shadow: 0 0 10px #00C851; }
+        .reconectar .status-dot { background-color: #ffbb33; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        #btn-config {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.5);
+            color: white; width: 45px; height: 45px;
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-size: 20px; cursor: pointer; transition: all 0.3s ease;
+        }
+        #btn-config:hover { background: white; color: #1e3c72; transform: rotate(90deg); }
+
+        /* --- FOLHAS E FORMULÁRIOS --- */
+        .area-formulario { display: none; }
+        .area-formulario.ativo { display: block; }
+
+        .painel-controle {
+            background: #343a40;
+            color: white;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        /* ESTILO PARA BOTÕES BLOQUEADOS */
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed !important;
+            pointer-events: none;
+            background-color: #6c757d !important;
+            border-color: #6c757d !important;
+        }
+
+        .folha {
+            background: white;
+            width: 210mm;
+            height: 297mm; /* Tamanho A4 Fixo */
+            margin: 0 auto 30px auto; /* Espaço entre folhas na tela */
+            padding: 5mm; /* Margem pequena 5mm */
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            position: relative;
+            box-sizing: border-box;
+            page-break-after: always; /* Garante quebra de página na impressão */
+            overflow: hidden;
+        }
+
+        /* SEPARADOR VISUAL NA TELA */
+        .separador-form {
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .separador-form::before, .separador-form::after {
+            content: ''; flex: 1; height: 1px; background: #ccc;
+        }
+
+        /* DB STYLE */
+        .db-container {
+            background: white; padding: 30px; border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            max-width: 1200px; margin: 0 auto;
+        }
+        /* Estilos da tabela do banco */
+        .table-hover tbody tr:hover { background-color: #f1f7ff; cursor: pointer; }
+        /* FAIXA ROSA PARA CITO */
+        .tr-cito { background-color: #ffe6f2 !important; }
+        .tr-cito:hover { background-color: #ffcce6 !important; }
+
+        /* ESTILOS PADRÃO FORMULARIO */
+        .f2-grid-header { border: 2px solid #000; font-size: 9pt; }
+        .f2-row { display: flex; border-bottom: 1px solid #000; }
+        .f2-row:last-child { border-bottom: none; }
+        .f2-cell { padding: 1px 3px; border-right: 1px solid #000; position: relative; display: flex; flex-direction: column; justify-content: center; } 
+        .f2-cell:last-child { border-right: none; }
+        .f2-cell label { display: block; font-size: 7pt; font-weight: bold; margin-bottom: 0; line-height: 1; }
+        .f2-cell input, .f2-cell select { width: 100%; border: none; font-family: 'Courier New'; font-weight: bold; font-size: 10pt; outline: none; background: transparent; padding: 0; margin: 0; height: 18px;}
+        .f2-cell select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+        
+        .check-item { display: flex; align-items: center; gap: 4px; margin-bottom: 0; font-size: 8pt; }
+        .check-item input[type="checkbox"] { width: 12px; height: 12px; margin: 0; cursor: pointer; }
+
+        /* ESTILOS ESPECÍFICOS CITO */
+        .cito-header { text-align: center; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 5px; }
+        .cito-section-title { background: #eee; font-weight: bold; font-size: 8pt; padding: 2px 5px; border: 1px solid #000; margin-top: 5px; text-transform: uppercase; }
+        .cito-question-row { display: flex; border-bottom: 1px solid #ccc; padding: 2px 0; font-size: 8pt; align-items: center; }
+        .cito-question-row:last-child { border-bottom: none; }
+        .cito-q-text { flex: 1; font-weight: bold; }
+        .cito-q-opts { display: flex; flex-wrap: wrap; gap: 10px; width: 320px; justify-content: flex-start; }
+        
+        .cito-checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-size: 8pt; border: 1px solid #000; padding: 5px; }
+        .cito-checkbox-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; font-size: 8pt; border: 1px solid #000; padding: 5px; }
+
+        /* ESTILOS FILANTROPICO/EVOLUCAO (Mantidos) */
+        .f1-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 2px; font-weight: bold; }
+        .f1-box { border: 2px solid #000; display: flex; flex-direction: column; }
+        .f1-row { display: flex; border-bottom: 1px solid #000; }
+        .f1-row:last-child { border-bottom: none; }
+        .f1-col { border-right: 1px solid #000; padding: 1px 4px; display: flex; flex-direction: column; }
+        .f1-col:last-child { border-right: none; }
+        .f1-label { font-size: 7.5pt; font-weight: bold; }
+        .f1-input { border: none; font-family: 'Courier New'; font-weight: bold; width: 100%; outline: none; background: transparent; font-size: 9pt; }
+        .f1-linha { border-bottom: 1px solid #000; height: 13px; width: 100%; margin-top: 2px; }
+        .f1-titulo-secao { font-size: 8.5pt; font-weight: bold; margin-top: 2px; display: block; text-transform: uppercase; }
+        
+        /* ESTILOS DA FOLHA 1 VERSO (OTIMIZADOS PARA CABER) */
+        .f2-title { text-align: center; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; font-size: 10pt; }
+        .f2-table { width: 100%; border-collapse: collapse; font-size: 6.5pt; border: 2px solid #000; margin-top: 2px; } /* FONTE REDUZIDA PARA CABER */
+        .f2-table th { border: 1px solid #000; text-align: center; background: #eee; padding: 1px; font-size: 7pt; }
+        .f2-table td { border: 1px solid #000; padding: 0 2px; vertical-align: middle; height: 13px; } /* ALTURA REDUZIDA PARA CABER */
+        
+        /* Utilitários Largura */
+        .w-05 { width: 5%; } .w-10 { width: 10%; } .w-15 { width: 15%; } .w-20 { width: 20%; } .w-25 { width: 25%; } .w-30 { width: 30%; } 
+        .w-35 { width: 35%; } .w-40 { width: 40%; } .w-50 { width: 50%; } .w-60 { width: 60%; } .w-70 { width: 70%; } .w-80 { width: 80%; } .w-100 { width: 100%; }
+
+        @media print {
+            body { background: white; padding: 0; margin: 0; }
+            #menu-selecao, .painel-controle, .no-print, #form-db-area, .separador-form { display: none !important; }
+            .area-formulario { display: none !important; }
+            .area-formulario.ativo { display: block !important; }
+            
+            .folha { 
+                margin: 0; 
+                box-shadow: none; 
+                width: 210mm; 
+                height: 297mm; 
+                page-break-after: always; 
+                border: none;
+                padding: 5mm; 
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="menu-selecao">
+        <div id="btn-config" onclick="trocarPasta()" title="Trocar Pasta do Banco de Dados"><i class="bi bi-gear-fill"></i></div>
+        
+        <div id="banco-container">
+            <div id="aviso-banco" class="aviso-autorizacao" style="display: none;">
+                Autorize o banco de dados <i class="bi bi-arrow-right-circle-fill" style="font-size: 1.5rem;"></i>
+            </div>
+            <div id="db-status" onclick="conectarBanco()">
+                <span class="status-dot"></span>
+                <span id="status-text">Pasta Desconectada</span>
+            </div>
+        </div>
+
+        <img src="logo.png" alt="Logo AMCAP" style="max-width: 400px; margin-bottom: 20px;">
+        <h1 class="text-white mb-5" style="text-shadow: 2px 2px 4px #000; font-size: 3rem;"> sys AMCAP</h1>
+        
+        <div class="menu-grid">
+            <div id="card-geral" class="card-opcao card-verde bloqueado" onclick="abrirFichaUnificada()">
+                <div style="position:absolute; top:0; right:0; background:#198754; color:white; padding:5px 15px; border-bottom-left-radius:10px; font-weight:bold; font-size:0.8rem;">GERAL</div>
+                <i class="bi bi-folder2-open icon-lg icon-verde"></i>
+                <h3 class="text-success fw-bold">FICHA COMPLETA</h3>
+                <p class="text-muted mb-0 small">Filantrópico + Evolução</p>
+                <div id="count-geral" class="badge-count">0 cadastros</div>
+            </div>
+
+            <div id="card-cito" class="card-opcao card-rosa bloqueado" onclick="abrirFichaCitopatologico()">
+                <div style="position:absolute; top:0; right:0; background:#d63384; color:white; padding:5px 15px; border-bottom-left-radius:10px; font-weight:bold; font-size:0.8rem;">MULHER</div>
+                <i class="bi bi-gender-female icon-lg icon-rosa"></i>
+                <h3 style="color: #d63384; font-weight: bold;">CITOPATOLÓGICO</h3>
+                <p class="text-muted mb-0 small">Filan + Enf (2 Pag)</p>
+                <div id="count-cito" class="badge-count">0 cadastros</div>
+            </div>
+        </div>
+
+        <button id="btn-db" onclick="abrirBancoDados()" class="btn-db-geral bloqueado">
+            <i class="bi bi-database-fill"></i> ABRIR BANCO DE DADOS
+        </button>
+    </div>
+
+    <div id="form-db-area" class="area-formulario db-container">
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+            <h3 class="text-primary m-0"><i class="bi bi-database"></i> Banco de Dados Geral</h3>
+            <button onclick="voltarMenu()" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar ao Menu</button>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" id="db-search" class="form-control border-start-0" placeholder="Pesquisar por CPF ou CNS..." onkeyup="filtrarTabelaBanco()">
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <button onclick="exportarExcel()" class="btn btn-success fw-bold w-100"><i class="bi bi-file-earmark-excel-fill"></i> EXPORTAR EXCEL</button>
+            </div>
+        </div>
+        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+            <table class="table table-hover table-bordered align-middle">
+                <thead class="table-light sticky-top">
+                    <tr><th>Tipo</th><th>CPF / CNS</th><th>Nome do Paciente</th><th>Contato</th><th>Ações</th></tr>
+                </thead>
+                <tbody id="db-table-body">
+                    <tr><td colspan="5" class="text-center text-muted py-4">Carregando dados...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="text-muted small mt-2 text-end" id="db-total-registros">0 registros encontrados.</div>
+    </div>
+
+    <div id="area-unificada" class="area-formulario">
+        <div class="painel-controle container no-print">
+            <div class="d-flex align-items-center gap-2">
+                <button id="btn-voltar-geral" onclick="voltarMenu()" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Menu</button>
+                <span class="fw-bold text-success">| FICHA COMPLETA (UNIFICADA)</span>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <div class="input-group input-group-sm" style="width: 200px;">
+                    <input type="text" id="buscaCpfGeral" class="form-control" placeholder="CPF ou CNS..." onkeydown="if(event.key === 'Enter') buscarGeral()">
+                    <button onclick="buscarGeral()" class="btn btn-warning"><i class="bi bi-search"></i></button>
+                </div>
+                <button id="btn-limpar-geral" onclick="limparTudo('area-unificada')" class="btn btn-outline-light btn-sm"><i class="bi bi-eraser-fill"></i> Limpar</button>
+                <button onclick="salvarUnificada()" class="btn btn-success btn-sm fw-bold px-3"><i class="bi bi-save"></i> SALVAR</button>
+                <button id="btn-imprimir-geral" onclick="window.print()" class="btn btn-primary btn-sm fw-bold px-3" disabled><i class="bi bi-printer"></i> IMPRIMIR</button>
+            </div>
+        </div>
+
+        <div class="separador-form no-print">FOLHA 1 (FRENTE) - FILANTRÓPICO</div>
+        <div class="folha">
+            <div class="d-flex justify-content-between align-items-end mb-1">
+                <div class="small fw-bold lh-1">PROGRAMA<br>SAÚDE E CIDADANIA</div>
+                <div class="h5 fw-bold m-0">FICHA DE ATENDIMENTO FILANTRÓPICO</div>
+            </div>
+            <div class="f2-grid-header">
+                <div class="f2-row">
+                    <div class="f2-cell w-30"><label>CNS:</label><input id="f2_cns" maxlength="20" oninput="sincronizarCampos('cns', this.value)"></div>
+                    <div class="f2-cell w-60"><label>Local:</label><input id="f2_local" value="CASA DO POVO VALÉRIA" oninput="sincronizarCampos('local', this.value)"></div>
+                    <div class="f2-cell w-10"><label>CR:</label><input id="f2_cr" maxlength="6" value="3007"></div>
+                </div>
+                <div class="f2-row">
+                    <div class="f2-cell w-40 d-flex flex-row align-items-center gap-2">
+                        <div class="check-item"><input type="checkbox"> Unidade móvel</div> 
+                        <div class="check-item"><input type="checkbox" id="f2_itinerante" checked> Itinerante</div>
+                    </div>
+                    <div class="f2-cell w-20"><label>Data:</label><input type="text" placeholder="__/__/____" id="f2_data" maxlength="10" oninput="mascaraData(this)" onkeydown="preencherDataHoraAtual(event, this)"></div>
+                    <div class="f2-cell w-10"><label>Hora:</label><input type="time" id="f2_hora" onkeydown="preencherDataHoraAtual(event, this)"></div>
+                    <div class="f2-cell w-30"><label>Registro:</label><input id="f2_registro" oninput="sincronizarCampos('registro', this.value)"></div>
+                </div>
+                <div class="f2-row"><div class="f2-cell w-60"><label>Nome:</label><input id="f2_nome" oninput="sincronizarCampos('nome', this.value)"></div><div class="f2-cell w-40"><label>Social:</label><input id="f2_social"></div></div>
+                <div class="f2-row">
+                    <div class="f2-cell w-60"><label>E-mail:</label><input id="f2_email"></div>
+                    <div class="f2-cell w-40"><label>Fone:</label><input id="f2_fone" maxlength="16" oninput="mascaraTelefone(this); sincronizarCampos('fone', this.value)" placeholder="(00) 0 0000-0000"></div>
+                </div>
+                <div class="f2-row">
+                    <div class="f2-cell w-10">
+                        <label>Doc:</label>
+                        <select id="f2_tipo_doc">
+                            <option value="CPF" selected>CPF</option>
+                        </select>
+                    </div>
+                    <div class="f2-cell w-35"><label>Nº:</label><input id="f2_num_doc" placeholder="000.000.000-00" oninput="mascaraDocumento(this, 'f2_tipo_doc'); sincronizarCampos('num_doc', this.value)"></div>
+                    <div class="f2-cell w-30">
+                        <label>Sexo:</label>
+                        <div class="d-flex align-items-center justify-content-around" style="font-size: 8pt; margin-top: 2px;">
+                            <div class="check-item"><input type="checkbox" id="sexo_m" onchange="atualizarResponsavel('geral')"> M</div>
+                            <div class="check-item"><input type="checkbox" id="sexo_f" onchange="atualizarResponsavel('geral')"> F</div>
+                            <div class="check-item"><input type="checkbox" id="sexo_o"> Outros</div>
+                        </div>
+                    </div>
+                    <div class="f2-cell w-25"><label>Nascimento:</label><input type="text" placeholder="__/__/____" id="f2_nasc" maxlength="10" oninput="mascaraData(this); sincronizarCampos('nasc', this.value)"></div>
+                </div>
+                <div class="f2-row"><div class="f2-cell w-100"><label>Mãe:</label><input id="f2_mae" oninput="atualizarResponsavel('geral')"></div></div>
+                <div class="f2-row"><div class="f2-cell w-100"><label>Endereço:</label><input id="f2_end"></div></div>
+                <div class="f2-row">
+                    <div class="f2-cell w-40"><label>Bairro:</label><input id="f2_bairro"></div>
+                    <div class="f2-cell w-30"><label>Cidade:</label><input id="f2_cidade"></div>
+                    <div class="f2-cell w-10"><label>UF:</label><input id="f2_uf"></div>
+                    <div class="f2-cell w-20"><label>CEP:</label><input id="f2_cep" onblur="buscarCep(this.value, 'f2')" maxlength="9" placeholder="Digite o CEP" style="background-color: #d4edda;"></div>
+                </div>
+            </div>
+            <div class="f2-title mt-2 border-top border-bottom border-dark py-1 bg-light">AÇÕES DE SAÚDE</div>
+            <table class="f2-table">
+                <thead><tr><th style="width: 40%;">Serviço(s):</th><th style="width: 25%;">Profissional</th><th style="width: 35%;">Assinatura do Paciente</th></tr></thead>
+                <tbody id="tabela-servicos-1"></tbody>
+            </table>
+        </div>
+
+        <div class="separador-form no-print">FOLHA 1 (VERSO) - CONTINUAÇÃO</div>
+        <div class="folha" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <div class="f2-title border-bottom border-dark py-1">FICHA DE ATENDIMENTO FILANTRÓPICO</div>
+                <div class="text-center small fw-bold mb-1">AÇÕES DE SAÚDE (CONTINUAÇÃO)</div>
+                <table class="f2-table">
+                    <thead><tr><th style="width: 35%;">Serviço(s):</th><th style="width: 30%;">Profissional</th><th style="width: 35%;">Assinatura</th></tr></thead>
+                    <tbody id="tabela-servicos-2"></tbody>
+                </table>
+                <div class="f2-title mt-2 border-top border-bottom border-dark py-1 bg-light">AÇÕES COMPLEMENTARES</div>
+                <table class="f2-table">
+                    <thead><tr><th style="width: 30%;">Serviço(s):</th><th style="width: 30%;">Profissional:</th><th style="width: 10%;">Qtd:</th><th style="width: 30%;">Assinatura:</th></tr></thead>
+                    <tbody id="tabela-complementares"></tbody>
+                </table>
+            </div>
+
+            <div style="border: 2px solid #000; margin-top: 5px; font-size: 9pt; display: flex;">
+                <div style="width: 50%; border-right: 1px solid #000;">
+                    <div style="border-bottom: 1px solid #000; padding: 2px 5px; font-weight: bold; background: #eee;">Responsável pela informação</div>
+                    <div style="display: flex; height: 50px;">
+                        <div style="width: 60%; border-right: 1px solid #000; padding: 5px; position: relative;">
+                            <label style="font-weight: bold; font-size: 8pt; display: block;">Nome:</label>
+                            <input id="f2_resp_nome" style="width: 100%; border: none; background: transparent; font-family: 'Courier New'; font-weight: bold; outline: none; position: absolute; bottom: 5px; left: 5px; width: 90%;">
+                        </div>
+                        <div style="width: 40%; padding: 5px;">
+                            <label style="font-weight: bold; font-size: 8pt;">Assinatura:</label>
+                        </div>
+                    </div>
+                </div>
+                <div style="width: 50%;">
+                    <div style="border-bottom: 1px solid #000; padding: 2px 5px; font-weight: bold; background: #eee;">Conferido por:</div>
+                    <div style="display: flex; height: 50px;">
+                        <div style="width: 60%; border-right: 1px solid #000; padding: 5px; position: relative;">
+                            <label style="font-weight: bold; font-size: 8pt; display: block;">Nome:</label>
+                            <input id="f2_conf_nome" style="width: 100%; border: none; background: transparent; font-family: 'Courier New'; font-weight: bold; outline: none; position: absolute; bottom: 5px; left: 5px; width: 90%;">
+                        </div>
+                        <div style="width: 40%; padding: 5px;">
+                            <label style="font-weight: bold; font-size: 8pt;">Assinatura:</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="separador-form no-print">FOLHA 2 (FRENTE) - EVOLUÇÃO MÉDICA</div>
+        <div class="folha" style="font-size: 10pt;">
+            <div class="f1-header"><span>PROGRAMA SAÚDE E CIDADANIA</span><span>EVOLUÇÃO MÉDICA</span></div>
+            <div class="f1-box mb-2">
+                <div class="f1-row"><div class="f1-col w-20"><label class="f1-label">1 - IDENTIFICAÇÃO / CNS:</label><input id="f1_cns" class="f1-input" oninput="sincronizarCampos('cns', this.value)"></div><div class="f1-col w-80"><label class="f1-label">Comunidade:</label><input id="f1_comunidade" class="f1-input" value="VALÉRIA"></div></div>
+                <div class="f1-row"><div class="f1-col w-70"><label class="f1-label">Nome do Paciente:</label><input id="f1_nome" class="f1-input" oninput="sincronizarCampos('nome', this.value)"></div><div class="f1-col w-30"><label class="f1-label">REGISTRO:</label><input id="f1_registro" class="f1-input" oninput="sincronizarCampos('registro', this.value)"></div></div>
+                <div class="f1-row">
+                    <div class="f1-col w-15"><label class="f1-label">Nascimento:</label><input type="text" placeholder="__/__/____" id="f1_nasc" maxlength="10" class="f1-input" oninput="mascaraData(this); sincronizarCampos('nasc', this.value)" onblur="calcularIdade(this.value, 'f1_idade')"></div>
+                    <div class="f1-col w-05"><label class="f1-label">Idade:</label><input id="f1_idade" class="f1-input"></div>
+                    <div class="f1-col w-10">
+                        <label class="f1-label">Doc:</label>
+                        <select id="f1_tipo_doc" class="f1-input" onchange="sincronizarTipoDoc(this.value)">
+                            <option value="CPF" selected>CPF</option>
+                        </select>
+                    </div>
+                    <div class="f1-col w-20"><label class="f1-label">Nº:</label><input id="f1_num_doc" class="f1-input" oninput="mascaraDocumento(this, 'f1_tipo_doc'); sincronizarCampos('num_doc', this.value)"></div>
+                    <div class="f1-col w-50"><label class="f1-label">Responsável:</label><input id="f1_resp" class="f1-input"></div>
+                </div>
+                <div class="f1-row"><div class="f1-col w-50"><label class="f1-label">Profissão:</label><input id="f1_prof" class="f1-input"></div><div class="f1-col w-50"><label class="f1-label">Estado Civil:</label><input id="f1_civil" class="f1-input"></div></div>
+                <div class="f1-row">
+                    <div class="f1-col w-30"><label class="f1-label">Fone:</label><input id="f1_fone" class="f1-input" maxlength="16" oninput="mascaraTelefone(this); sincronizarCampos('fone', this.value)"></div>
+                    <div class="f1-col w-40"><label class="f1-label">Escolaridade:</label><input id="f1_escol" class="f1-input"></div>
+                    <div class="f1-col w-30"><label class="f1-label">Naturalidade:</label><input id="f1_nat" class="f1-input"></div>
+                </div>
+                <div class="f1-row"><div class="f1-col w-100"><label class="f1-label">Endereço:</label><input id="f1_end" class="f1-input"></div></div>
+            </div>
+            <div class="mb-1 fw-bold small">2 - CONSULTA: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DATA: ____/____/______ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PA: _______x_______</div>
+            <span class="f1-subtitulo">Q.P.:</span><div class="f1-linha" style="display:inline-block; width: 95%;"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+            <span class="f1-titulo-secao">H.M.A.:</span>
+            <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+            <span class="f1-titulo-secao">I.S.:</span><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+            <span class="f1-titulo-secao">A. P. (OBSTÉTRICOS, NEONATAIS, PATOLÓGICOS):</span><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+            <span class="f1-titulo-secao">A.F.:</span><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+            <span class="f1-titulo-secao">H.V.:</span><div class="f1-linha"></div><div class="f1-linha"></div>
+            <span class="f1-titulo-secao">EXAME FÍSICO:</span>
+            <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+            <span class="f1-titulo-secao">SD:</span>
+            <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+            <span class="f1-titulo-secao">CD:</span>
+            <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+            <div class="d-flex align-items-end mt-2">
+                <span class="f1-titulo-secao" style="margin-right: 5px;">PENDÊNCIAS:</span>
+                <div class="f1-linha"></div>
+            </div>
+            <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+        </div>
+
+        <div class="separador-form no-print">FOLHA 2 (VERSO) - RETORNOS</div>
+        <div class="folha">
+            <div style="height: 49%; border-bottom: 2px dashed #999; padding-bottom: 10px;">
+                <div class="fw-bold mb-2">3 - RETORNO EM: ____/____/____</div>
+                <div class="d-flex align-items-end mb-1"><span class="small fw-bold me-2">QP:</span><div class="f1-linha"></div></div>
+                <div class="d-flex align-items-end mb-1"><span class="small fw-bold me-2">HMA:</span><div class="f1-linha"></div></div>
+                <div class="small fw-bold mt-2">RESULTADOS DE EX:</div>
+                <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+                <div class="d-flex align-items-end mt-2"><span class="small fw-bold me-2">SD:</span><div class="f1-linha"></div></div>
+                <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+                <div class="d-flex align-items-end mt-2"><span class="small fw-bold me-2">CD:</span><div class="f1-linha"></div></div>
+                <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+            </div>
+            <div style="height: 49%; padding-top: 10px;">
+                <div class="fw-bold mb-2">4 - RETORNO EM: ____/____/____</div>
+                <div class="d-flex align-items-end mb-1"><span class="small fw-bold me-2">QP:</span><div class="f1-linha"></div></div>
+                <div class="d-flex align-items-end mb-1"><span class="small fw-bold me-2">HMA:</span><div class="f1-linha"></div></div>
+                <div class="small fw-bold mt-2">RESULTADOS DE EX:</div>
+                <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+                <div class="d-flex align-items-end mt-2"><span class="small fw-bold me-2">SD:</span><div class="f1-linha"></div></div>
+                <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+                <div class="d-flex align-items-end mt-2"><span class="small fw-bold me-2">CD:</span><div class="f1-linha"></div></div>
+                <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="area-citopatologico" class="area-formulario">
+        <div class="painel-controle container no-print">
+            <div class="d-flex align-items-center gap-2">
+                <button id="btn-voltar-cito" onclick="voltarMenu()" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Menu</button>
+                <span class="fw-bold" style="color:#ff8dc7">| FICHA CITOPATOLÓGICO (MULHER)</span>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <div class="input-group input-group-sm" style="width: 200px;">
+                    <input type="text" id="buscaCpfCito" class="form-control" placeholder="CPF ou CNS..." onkeydown="if(event.key === 'Enter') buscarCito()">
+                    <button onclick="buscarCito()" class="btn btn-light"><i class="bi bi-search"></i></button>
+                </div>
+                <button id="btn-limpar-cito" onclick="limparTudo('area-citopatologico')" class="btn btn-outline-light btn-sm"><i class="bi bi-eraser-fill"></i> Limpar</button>
+                <button onclick="salvarCito()" class="btn btn-success btn-sm fw-bold px-3"><i class="bi bi-save"></i> SALVAR CITO</button>
+                <button id="btn-imprimir-cito" onclick="window.print()" class="btn btn-primary btn-sm fw-bold px-3" disabled><i class="bi bi-printer"></i> IMPRIMIR</button>
+            </div>
+        </div>
+
+        <div class="separador-form no-print">ANEXO: FOLHA 3 (FRENTE) - FILANTRÓPICO</div>
+        <div class="folha">
+            <div class="d-flex justify-content-between align-items-end mb-1">
+                <div class="small fw-bold lh-1">PROGRAMA<br>SAÚDE E CIDADANIA</div>
+                <div class="h5 fw-bold m-0">FICHA DE ATENDIMENTO FILANTRÓPICO</div>
+            </div>
+            <div class="f2-grid-header">
+                <div class="f2-row">
+                    <div class="f2-cell w-30"><label>CNS:</label><input id="cf_cns" maxlength="20" oninput="sincronizarFilantropicoParaEnfermagem()"></div>
+                    <div class="f2-cell w-60"><label>Local:</label><input id="cf_local" value="CASA DO POVO VALÉRIA" oninput="sincronizarFilantropicoParaEnfermagem()"></div>
+                    <div class="f2-cell w-10"><label>CR:</label><input id="cf_cr" maxlength="6" value="3007"></div>
+                </div>
+                <div class="f2-row">
+                    <div class="f2-cell w-40 d-flex flex-row align-items-center gap-2"><div class="check-item"><input type="checkbox" id="cf_movel"> Unidade móvel</div> <div class="check-item"><input type="checkbox" id="cf_itinerante" checked> Itinerante</div></div>
+                    <div class="f2-cell w-20"><label>Data:</label><input type="text" placeholder="__/__/____" id="cf_data" maxlength="10" oninput="mascaraData(this)" onkeydown="preencherDataHoraAtual(event, this)"></div>
+                    <div class="f2-cell w-10"><label>Hora:</label><input type="time" id="cf_hora" onkeydown="preencherDataHoraAtual(event, this)"></div>
+                    <div class="f2-cell w-30"><label>Registro:</label><input id="cf_registro" oninput="sincronizarFilantropicoParaEnfermagem()"></div>
+                </div>
+                <div class="f2-row"><div class="f2-cell w-60"><label>Nome:</label><input id="cf_nome" oninput="sincronizarFilantropicoParaEnfermagem()"></div><div class="f2-cell w-40"><label>Social:</label><input id="cf_social"></div></div>
+                <div class="f2-row">
+                    <div class="f2-cell w-60"><label>E-mail:</label><input id="cf_email"></div>
+                    <div class="f2-cell w-40"><label>Fone:</label><input id="cf_fone" maxlength="16" oninput="mascaraTelefone(this); sincronizarFilantropicoParaEnfermagem()" placeholder="(00) 0 0000-0000"></div>
+                </div>
+                <div class="f2-row">
+                    <div class="f2-cell w-10">
+                        <label>Doc:</label>
+                        <select id="cf_tipo_doc" onchange="sincronizarFilantropicoParaEnfermagem()">
+                            <option value="CPF" selected>CPF</option>
+                        </select>
+                    </div>
+                    <div class="f2-cell w-35"><label>Nº:</label><input id="cf_num_doc" placeholder="000.000.000-00" oninput="mascaraDocumento(this, 'cf_tipo_doc'); sincronizarFilantropicoParaEnfermagem()"></div>
+                    <div class="f2-cell w-30">
+                        <label>Sexo:</label>
+                        <div class="d-flex align-items-center justify-content-around" style="font-size: 8pt; margin-top: 2px;">
+                            <div class="check-item"><input type="checkbox" id="cf_sexo_m" onchange="sincronizarFilantropicoParaEnfermagem()"> M</div>
+                            <div class="check-item"><input type="checkbox" id="cf_sexo_f" checked onchange="sincronizarFilantropicoParaEnfermagem()"> F</div>
+                            <div class="check-item"><input type="checkbox" id="cf_sexo_o"> Outros</div>
+                        </div>
+                    </div>
+                    <div class="f2-cell w-25"><label>Nascimento:</label><input type="text" placeholder="__/__/____" id="cf_nasc" maxlength="10" oninput="mascaraData(this); sincronizarFilantropicoParaEnfermagem()"></div>
+                </div>
+                <div class="f2-row"><div class="f2-cell w-100"><label>Mãe:</label><input id="cf_mae" oninput="sincronizarFilantropicoParaEnfermagem()"></div></div>
+                <div class="f2-row"><div class="f2-cell w-100"><label>Endereço:</label><input id="cf_end" oninput="sincronizarFilantropicoParaEnfermagem()"></div></div>
+                <div class="f2-row">
+                    <div class="f2-cell w-40"><label>Bairro:</label><input id="cf_bairro"></div>
+                    <div class="f2-cell w-30"><label>Cidade:</label><input id="cf_cidade" oninput="sincronizarFilantropicoParaEnfermagem()"></div>
+                    <div class="f2-cell w-10"><label>UF:</label><input id="cf_uf" oninput="sincronizarFilantropicoParaEnfermagem()"></div>
+                    <div class="f2-cell w-20"><label>CEP:</label><input id="cf_cep" maxlength="9" onblur="buscarCep(this.value, 'cf')" placeholder="Digite CEP"></div>
+                </div>
+            </div>
+            <div class="f2-title mt-2 border-top border-bottom border-dark py-1 bg-light">AÇÕES DE SAÚDE</div>
+            <table class="f2-table">
+                <thead><tr><th style="width: 40%;">Serviço(s):</th><th style="width: 25%;">Profissional</th><th style="width: 35%;">Assinatura do Paciente</th></tr></thead>
+                <tbody id="cf_tabela_servicos_1"></tbody>
+            </table>
+        </div>
+
+        <div class="separador-form no-print">ANEXO: FOLHA 4 (VERSO) - CONTINUAÇÃO</div>
+        <div class="folha" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <div class="f2-title border-bottom border-dark py-1">FICHA DE ATENDIMENTO FILANTRÓPICO</div>
+                <div class="text-center small fw-bold mb-1">AÇÕES DE SAÚDE (CONTINUAÇÃO)</div>
+                <table class="f2-table">
+                    <thead><tr><th style="width: 35%;">Serviço(s):</th><th style="width: 30%;">Profissional</th><th style="width: 35%;">Assinatura</th></tr></thead>
+                    <tbody id="cf_tabela_servicos_2"></tbody>
+                </table>
+                <div class="f2-title mt-2 border-top border-bottom border-dark py-1 bg-light">AÇÕES COMPLEMENTARES</div>
+                <table class="f2-table">
+                    <thead><tr><th style="width: 30%;">Serviço(s):</th><th style="width: 30%;">Profissional:</th><th style="width: 10%;">Qtd:</th><th style="width: 30%;">Assinatura:</th></tr></thead>
+                    <tbody id="cf_tabela_complementares"></tbody>
+                </table>
+            </div>
+
+            <div style="border: 2px solid #000; margin-top: 5px; font-size: 9pt; display: flex;">
+                <div style="width: 50%; border-right: 1px solid #000;">
+                    <div style="border-bottom: 1px solid #000; padding: 2px 5px; font-weight: bold; background: #eee;">Responsável pela informação</div>
+                    <div style="display: flex; height: 50px;">
+                        <div style="width: 60%; border-right: 1px solid #000; padding: 5px; position: relative;">
+                            <label style="font-weight: bold; font-size: 8pt; display: block;">Nome:</label>
+                            <input id="cf_resp_nome" style="width: 100%; border: none; background: transparent; font-family: 'Courier New'; font-weight: bold; outline: none; position: absolute; bottom: 5px; left: 5px; width: 90%;">
+                        </div>
+                        <div style="width: 40%; padding: 5px;">
+                            <label style="font-weight: bold; font-size: 8pt;">Assinatura:</label>
+                        </div>
+                    </div>
+                </div>
+                <div style="width: 50%;">
+                    <div style="border-bottom: 1px solid #000; padding: 2px 5px; font-weight: bold; background: #eee;">Conferido por:</div>
+                    <div style="display: flex; height: 50px;">
+                        <div style="width: 60%; border-right: 1px solid #000; padding: 5px; position: relative;">
+                            <label style="font-weight: bold; font-size: 8pt; display: block;">Nome:</label>
+                            <input id="cf_conf_nome" style="width: 100%; border: none; background: transparent; font-family: 'Courier New'; font-weight: bold; outline: none; position: absolute; bottom: 5px; left: 5px; width: 90%;">
+                        </div>
+                        <div style="width: 40%; padding: 5px;">
+                            <label style="font-weight: bold; font-size: 8pt;">Assinatura:</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="separador-form no-print">ANEXO: FOLHA 5 - EVOLUÇÃO DE ENFERMAGEM</div>
+        <div class="folha" style="font-size: 10pt;">
+            <div class="f1-header"><span>PROGRAMA SAÚDE E CIDADANIA</span><span>EVOLUÇÃO DE ENFERMAGEM</span></div>
+            <div class="f1-box mb-2">
+                <div class="f1-row"><div class="f1-col w-100"><label class="f1-label">1 - IDENTIFICAÇÃO DO PACIENTE</label></div></div>
+                <div class="f1-row"><div class="f1-col w-100"><label class="f1-label">Nome:</label><input id="enf_nome" class="f1-input"></div></div>
+                <div class="f1-row">
+                    <div class="f1-col w-20"><label class="f1-label">CNS:</label><input id="enf_cns" class="f1-input"></div>
+                    <div class="f1-col w-20"><label class="f1-label">Registro:</label><input id="enf_registro" class="f1-input"></div>
+                    <div class="f1-col w-05"><label class="f1-label">Idade:</label><input id="enf_idade" class="f1-input"></div>
+                    <div class="f1-col w-25"><label class="f1-label">Data de nascimento:</label><input type="text" placeholder="__/__/____" id="enf_nasc" maxlength="10" class="f1-input" oninput="mascaraData(this)"></div>
+                    <div class="f1-col w-15"><label class="f1-label">Sexo:</label>
+                        <div style="display:flex; gap:5px; font-size:8pt;">
+                           <div class="check-item"><input type="checkbox" id="enf_sexo_m"> M</div>
+                           <div class="check-item"><input type="checkbox" id="enf_sexo_f"> F</div>
+                        </div>
+                    </div>
+                    <div class="f1-col w-15"><label class="f1-label">RG:</label><input id="enf_rg" class="f1-input"></div>
+                </div>
+                <div class="f1-row">
+                    <div class="f1-col w-50"><label class="f1-label">Comunidade:</label><input id="enf_comunidade" class="f1-input" value="VALÉRIA"></div>
+                    <div class="f1-col w-50"><label class="f1-label">Responsável:</label><input id="enf_resp" class="f1-input"></div>
+                </div>
+                <div class="f1-row">
+                    <div class="f1-col w-50"><label class="f1-label">Profissão:</label><input id="enf_prof" class="f1-input"></div>
+                    <div class="f1-col w-25"><label class="f1-label">Estado civil:</label><input id="enf_civil" class="f1-input"></div>
+                    <div class="f1-col w-25"><label class="f1-label">Telefone:</label><input id="enf_fone" class="f1-input"></div>
+                </div>
+                <div class="f1-row">
+                    <div class="f1-col w-50"><label class="f1-label">Endereço:</label><input id="enf_end" class="f1-input"></div>
+                    <div class="f1-col w-30"><label class="f1-label">Município:</label><input id="enf_mun" class="f1-input"></div>
+                    <div class="f1-col w-05"><label class="f1-label">UF:</label><input id="enf_uf" class="f1-input"></div>
+                    <div class="f1-col w-15"><label class="f1-label">CEP:</label><input id="enf_cep" class="f1-input"></div>
+                </div>
+            </div>
+
+            <div class="mb-1 fw-bold small text-center border-top border-bottom border-dark py-1">2 - CONSULTA</div>
+            
+            <div class="d-flex justify-content-between mb-2 mt-2 px-2">
+                <div style="width: 30%; border-bottom: 1px solid #000;">Data: <input type="text" placeholder="__/__/____" id="enf_data_con" maxlength="10" oninput="mascaraData(this)" style="border:none; outline:none;" onkeydown="preencherDataHoraAtual(event, this)"></div>
+                <div style="width: 30%; border-bottom: 1px solid #000;">Peso: <input id="enf_peso" style="width: 50px; border:none; outline:none;"> kg</div>
+                <div style="width: 30%; border-bottom: 1px solid #000;">Altura: <input id="enf_altura" style="width: 50px; border:none; outline:none;"> m</div>
+            </div>
+
+            <span class="f1-label">Histórico da doença atual:</span>
+            <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+            <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+
+            <span class="f1-label mt-2 d-block">Antecedentes pessoais (diabetes, cardiopatias, dislipidemias, tabagismo, etilismo, drogas, cirurgia anterior, alergias, etc):</span>
+            <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+            <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+
+            <span class="f1-label mt-2 d-block">Medicação em uso:</span>
+            <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+
+            <span class="f1-label mt-2 d-block">Antecedentes familiares (diabetes, hipertensão, cardiopatias, dislipidemias):</span>
+            <div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div><div class="f1-linha"></div>
+
+            <div class="f1-box mt-4 p-2" style="border: 2px solid #000;">
+                <div class="d-flex justify-content-between">
+                    <div style="width: 30%; border-bottom: 1px solid #000;">PA: <input id="enf_pa" style="border:none; outline:none; font-weight:bold;"></div>
+                    <div style="width: 30%; border-bottom: 1px solid #000;">Glicemia: <input id="enf_glicemia" style="border:none; outline:none; font-weight:bold;"></div>
+                    <div style="width: 30%; border-bottom: 1px solid #000;">Pulso: <input id="enf_pulso" style="border:none; outline:none; font-weight:bold;"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- VARIÁVEL GLOBAL DE ESTADO ---
+        let formEstaSalvo = true; // Assume salvo inicialmente (limpo)
+
+        // --- FUNÇÕES UTILITÁRIAS ---
+        function preencherDataHoraAtual(e, input) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); 
+                const agora = new Date();
+                if (input.type === 'date') {
+                    input.value = agora.toISOString().split('T')[0];
+                } else if (input.type === 'time') {
+                    input.value = agora.toTimeString().split(' ')[0].substring(0,5);
+                } else if (input.type === 'text') {
+                      // Formata DD/MM/AAAA para campos de texto
+                      const dia = String(agora.getDate()).padStart(2, '0');
+                      const mes = String(agora.getMonth() + 1).padStart(2, '0');
+                      const ano = agora.getFullYear();
+                      input.value = `${dia}/${mes}/${ano}`;
+                }
+            }
+        }
+
+        // Helper para obter data atual formatada DD/MM/AAAA
+        function getDataAtualFormatada() {
+            const d = new Date();
+            const dia = String(d.getDate()).padStart(2, '0');
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            const ano = d.getFullYear();
+            return `${dia}/${mes}/${ano}`;
+        }
+
+        // Helper para obter hora atual formatada HH:MM
+        function getHoraAtualFormatada() {
+            const d = new Date();
+            return d.toTimeString().substring(0, 5);
+        }
+
+        // --- MÁSCARA PARA DATA ---
+        function mascaraData(input) {
+            let v = input.value.replace(/\D/g, "");
+            v = v.substring(0, 8); // Limita a 8 números
+            if (v.length > 2) v = v.replace(/^(\d{2})(\d)/, "$1/$2");
+            if (v.length > 5) v = v.replace(/^(\d{2})\/(\d{2})(\d)/, "$1/$2/$3");
+            input.value = v;
+        }
+
+        // --- MÁSCARAS ---
+        function mascaraCPF(v) { v=v.replace(/\D/g,""); v=v.substring(0,11); v=v.replace(/(\d{3})(\d)/,"$1.$2"); v=v.replace(/(\d{3})(\d)/,"$1.$2"); v=v.replace(/(\d{3})(\d{1,2})$/,"$1-$2"); return v; }
+        function mascaraRG(v) { v=v.replace(/\D/g,""); v=v.substring(0,9); v=v.replace(/(\d{2})(\d)/,"$1.$2"); v=v.replace(/(\d{3})(\d)/,"$1.$2"); v=v.replace(/(\d{3})(\d{1})$/,"$1-$2"); return v; }
+        function mascaraTelefone(input) {
+            let v = input.value.replace(/\D/g, "").substring(0, 11);
+            if(v.length>10) v=v.replace(/^(\d\d)(\d)(\d{4})(\d{4}).*/,"($1) $2 $3-$4");
+            else if(v.length>6) v=v.replace(/^(\d\d)(\d{4})(\d{0,4}).*/,"($1) $2-$3");
+            else if(v.length>2) v=v.replace(/^(\d\d)(\d{0,5}).*/,"($1) $2");
+            input.value = v;
+        }
+
+        function mascaraDocumento(input, selectId) {
+            const tipo = document.getElementById(selectId).value;
+            input.value = (tipo === 'CPF') ? mascaraCPF(input.value) : mascaraRG(input.value);
+            input.maxLength = (tipo === 'CPF') ? 14 : 12;
+        }
+
+        // --- NOVA FUNÇÃO: ATUALIZAR RESPONSÁVEL ---
+        function atualizarResponsavel(tipo) {
+            let idade, isM, isF, mae, campoDestino;
+
+            if (tipo === 'geral') {
+                idade = parseInt(document.getElementById('f1_idade').value) || 0;
+                isM = document.getElementById('sexo_m').checked;
+                isF = document.getElementById('sexo_f').checked;
+                mae = document.getElementById('f2_mae').value;
+                campoDestino = document.getElementById('f1_resp');
+            } else { // cito
+                idade = parseInt(document.getElementById('enf_idade').value) || 0;
+                isM = document.getElementById('cf_sexo_m').checked;
+                isF = document.getElementById('cf_sexo_f').checked;
+                mae = document.getElementById('cf_mae').value;
+                campoDestino = document.getElementById('enf_resp');
+            }
+
+            if(!campoDestino) return;
+
+            if(idade >= 18) {
+                if(isM) campoDestino.value = "O MESMO";
+                else if(isF) campoDestino.value = "A MESMA";
+            } else {
+                campoDestino.value = mae;
+            }
+        }
+
+        // --- SINCRONIZAÇÃO (SOMENTE FICHA UNIFICADA) ---
+        function sincronizarCampos(campo, valor) {
+            const map = {
+                'nome': ['f1_nome', 'f2_nome'],
+                'nasc': ['f1_nasc', 'f2_nasc'],
+                'fone': ['f1_fone', 'f2_fone'],
+                'cns':  ['f1_cns',  'f2_cns'],
+                'registro': ['f1_registro', 'f2_registro'],
+                'num_doc': ['f1_num_doc', 'f2_num_doc'],
+                'local': ['f1_comunidade'] 
+            };
+            if(!map[campo]) return;
+            
+            if(campo === 'nasc') {
+                calcularIdade(valor, 'f1_idade');
+                atualizarResponsavel('geral');
+            }
+
+            const targetIds = map[campo];
+            targetIds.forEach(id => {
+                const el = document.getElementById(id);
+                if(el && document.activeElement !== el) {
+                    el.value = (campo === 'nome') ? valor.toUpperCase() : valor;
+                }
+            });
+            if(campo === 'tipo_doc') {
+                const t1 = document.getElementById('f1_tipo_doc');
+                const t2 = document.getElementById('f2_tipo_doc');
+                if(document.activeElement === t1) t2.value = valor;
+                else t1.value = valor;
+            }
+        }
+        
+        function sincronizarTipoDoc(valor) {
+            document.getElementById('f1_tipo_doc').value = valor;
+            document.getElementById('f2_tipo_doc').value = valor;
+            const inputs = ['f1_num_doc', 'f2_num_doc'];
+            inputs.forEach(id => {
+                const el = document.getElementById(id);
+                el.value = ""; 
+                el.maxLength = (valor === 'CPF') ? 14 : 12;
+                el.placeholder = (valor === 'CPF') ? '000.000.000-00' : 'RG';
+            });
+        }
+
+        // --- NOVA FUNÇÃO DE SINCRONIZAÇÃO CITOPATOLÓGICO (FILAN -> ENF) ---
+        function sincronizarFilantropicoParaEnfermagem() {
+            // Mapeamento de campos simples
+            const map = {
+                'cf_nome': 'enf_nome',
+                'cf_cns': 'enf_cns',
+                'cf_registro': 'enf_registro',
+                'cf_fone': 'enf_fone',
+                'cf_cep': 'enf_cep',
+                'cf_uf': 'enf_uf',
+                'cf_cidade': 'enf_mun' // Atenção: cidade para município
+            };
+
+            for (let sourceId in map) {
+                const source = document.getElementById(sourceId);
+                const target = document.getElementById(map[sourceId]);
+                if (source && target) target.value = source.value;
+            }
+
+            // Endereço (Logradouro)
+            document.getElementById('enf_end').value = document.getElementById('cf_end').value;
+
+            // Datas e Idade
+            const nasc = document.getElementById('cf_nasc').value;
+            document.getElementById('enf_nasc').value = nasc;
+            if(nasc) calcularIdade(nasc, 'enf_idade');
+
+            // Sexo
+            if(document.getElementById('cf_sexo_m').checked) document.getElementById('enf_sexo_m').checked = true;
+            if(document.getElementById('cf_sexo_f').checked) document.getElementById('enf_sexo_f').checked = true;
+
+            // Documento (RG)
+            const tipoDoc = document.getElementById('cf_tipo_doc').value;
+            const numDoc = document.getElementById('cf_num_doc').value;
+            if(tipoDoc === 'RG') {
+                document.getElementById('enf_rg').value = numDoc;
+            } else {
+                // Se for CPF no Filantrópico, não joga pro campo RG da Enfermagem, a menos que queira
+                document.getElementById('enf_rg').value = ""; 
+            }
+
+            // CHAMA A LÓGICA DO RESPONSÁVEL
+            atualizarResponsavel('cito');
+        }
+
+        // --- BANCO DE DADOS (INDEXED DB) ---
+        const dbName = 'AMCAP_DB'; const storeName = 'config'; let db;
+        async function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName, 1);
+                request.onupgradeneeded = (e) => { if(!e.target.result.objectStoreNames.contains(storeName)) e.target.result.createObjectStore(storeName); };
+                request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+        async function saveHandle(handle) { if(!db) await initDB(); const t = db.transaction([storeName],'readwrite'); t.objectStore(storeName).put(handle,'folderHandle'); }
+        async function getHandle() { if(!db) await initDB(); return new Promise(r => { const req = db.transaction([storeName],'readonly').objectStore(storeName).get('folderHandle'); req.onsuccess = () => r(req.result); }); }
+
+        let pastaHandle = null;
+        let listaPacientes = [];
+
+        window.addEventListener('load', async () => {
+            await initDB();
+            const handle = await getHandle();
+            if (handle) {
+                pastaHandle = handle;
+                document.getElementById('db-status').classList.add('reconectar');
+                document.getElementById('status-text').innerText = "Pasta: " + handle.name + " (Reconectar)";
+                
+                // NOVO: Exibe a seta caso o banco exista, mas não esteja conectado na sessão
+                document.getElementById('aviso-banco').innerHTML = 'Autorize o banco de dados <i class="bi bi-arrow-right-circle-fill" style="font-size: 1.5rem;"></i>';
+                document.getElementById('aviso-banco').style.display = 'flex';
+            } else {
+                // NOVO: Exibe a seta caso seja a primeira vez
+                document.getElementById('aviso-banco').innerHTML = 'Selecione a pasta do banco <i class="bi bi-arrow-right-circle-fill" style="font-size: 1.5rem;"></i>';
+                document.getElementById('aviso-banco').style.display = 'flex';
+            }
+            atualizarContadores();
+            preencherTabelas();
+        });
+
+        // FORÇA TODO INPUT DE TEXTO A SER MAIÚSCULO
+        document.addEventListener('input', function(e) {
+            if(e.target.tagName === 'INPUT' && (e.target.type === 'text' || e.target.type === 'email')) {
+                let start = e.target.selectionStart;
+                e.target.value = e.target.value.toUpperCase();
+                e.target.setSelectionRange(start, start);
+            }
+        });
+
+        async function conectarBanco() {
+            if (pastaHandle) {
+                const temPermissao = await verifyPermission(pastaHandle);
+                if (temPermissao) {
+                    atualizarStatusConectado(pastaHandle);
+                    atualizarContadores();
+                } else alert("Para acessar o banco, você precisa clicar em 'Permitir' na notificação do navegador.");
+            } else {
+                trocarPasta();
+            }
+        }
+
+        async function trocarPasta() {
+            try { 
+                pastaHandle = await window.showDirectoryPicker(); 
+                await saveHandle(pastaHandle); 
+                atualizarStatusConectado(pastaHandle);
+                atualizarContadores();
+            } catch(e) { console.error(e); }
+        }
+        
+        async function verifyPermission(h) { 
+            if ((await h.queryPermission({mode:'readwrite'}) === 'granted')) return true;
+            if ((await h.requestPermission({mode:'readwrite'}) === 'granted')) return true;
+            return false;
+        }
+
+        function atualizarStatusConectado(h) {
+            const statusDiv = document.getElementById('db-status');
+            statusDiv.classList.remove('reconectar');
+            statusDiv.classList.add('connected');
+            document.getElementById('status-text').innerText = "Conectado: " + h.name;
+
+            // NOVO: DESTRAVA AS FUNCIONALIDADES DA TELA E OCULTA O AVISO
+            document.getElementById('aviso-banco').style.display = 'none';
+            document.getElementById('card-geral').classList.remove('bloqueado');
+            document.getElementById('card-cito').classList.remove('bloqueado');
+            document.getElementById('btn-db').classList.remove('bloqueado');
+        }
+
+        async function atualizarContadores() {
+            if (!pastaHandle) return;
+            let countGeral = 0;
+            let countCito = 0;
+
+            for await (const entry of pastaHandle.values()) {
+                if (entry.kind === 'file' && entry.name.endsWith('.json')) {
+                    if(entry.name.startsWith('evolucao_')) countGeral++;
+                    else if(entry.name.startsWith('citopatologico_')) countCito++;
+                }
+            }
+            document.getElementById('count-geral').innerText = countGeral + " cadastros";
+            document.getElementById('count-cito').innerText = countCito + " cadastros";
+        }
+        
+        // --- GERENCIAMENTO DE ESTADO DOS BOTÕES ---
+        function setFormState(type, state) { 
+             const disabled = (state === 'unsaved');
+             formEstaSalvo = !disabled; // Atualiza a variável global
+
+             if(type === 'geral') {
+                 // Imprimir bloqueado se não salvo, Voltar e Limpar sempre livres
+                 document.getElementById('btn-imprimir-geral').disabled = disabled;
+             } else if (type === 'cito') {
+                 document.getElementById('btn-imprimir-cito').disabled = disabled;
+             }
+        }
+
+        // --- EXPORTAR EXCEL ---
+        function exportarExcel() {
+            if (listaPacientes.length === 0) return alert("A tabela está vazia ou o banco não foi carregado. Abra a lista primeiro.");
+            const dadosParaExcel = listaPacientes.map(p => ({
+                TIPO: p.tipo,
+                CPF: p.cpf,
+                NOME: p.nome,
+                CONTATO: p.fone 
+            }));
+            const ws = XLSX.utils.json_to_sheet(dadosParaExcel);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Pacientes_AMCAP");
+            XLSX.writeFile(wb, "Banco_de_Dados_AMCAP.xlsx");
+        }
+
+        // --- SALVAR / BUSCAR ---
+        async function salvarUnificada() {
+            if (!pastaHandle || !await verifyPermission(pastaHandle)) return alert("Conecte o banco primeiro!");
+            
+            // PRIORIDADE: CPF > CNS > F2_NUM_DOC (CPF)
+            let cpf = document.getElementById('f1_num_doc').value.replace(/\D/g, '') || 
+                      document.getElementById('f2_num_doc').value.replace(/\D/g, '') ||
+                      document.getElementById('buscaCpfGeral').value.replace(/\D/g, '');
+            
+            let cns = document.getElementById('f1_cns').value.replace(/\D/g, '') ||
+                      document.getElementById('f2_cns').value.replace(/\D/g, '');
+
+            let idArquivo = cpf;
+            if(!idArquivo) idArquivo = cns;
+
+            if (!idArquivo) return alert("É necessário informar o CPF ou o CNS para salvar a ficha!");
+            
+            let dados = {};
+            document.getElementById('area-unificada').querySelectorAll('input, select').forEach(el => {
+                if(el.id) dados[el.id] = (el.type === 'checkbox') ? el.checked : el.value;
+            });
+
+            try {
+                const fh1 = await pastaHandle.getFileHandle(`evolucao_${idArquivo}.json`, { create: true });
+                const w1 = await fh1.createWritable();
+                await w1.write(JSON.stringify(dados));
+                await w1.close();
+                const fh2 = await pastaHandle.getFileHandle(`filantropico_${idArquivo}.json`, { create: true });
+                const w2 = await fh2.createWritable();
+                await w2.write(JSON.stringify(dados));
+                await w2.close();
+                alert("Ficha Unificada salva com sucesso! (ID: " + idArquivo + ")");
+                setFormState('geral', 'saved');
+                atualizarContadores();
+            } catch (e) { alert("Erro ao salvar: " + e); }
+        }
+
+        async function salvarCito() {
+            if (!pastaHandle || !await verifyPermission(pastaHandle)) return alert("Conecte o banco primeiro!");
+            
+            // PRIORIDADE: CPF > CNS
+            let cpf = document.getElementById('cf_num_doc').value.replace(/\D/g, '');
+            let cns = document.getElementById('cf_cns').value.replace(/\D/g, '');
+            
+            let idArquivo = cpf;
+            if(!idArquivo) idArquivo = cns;
+
+            if (!idArquivo) return alert("É obrigatório informar o CPF ou o CNS para salvar!");
+
+            let dados = {};
+            document.getElementById('area-citopatologico').querySelectorAll('input, select').forEach(el => {
+                if(el.id) dados[el.id] = (el.type === 'checkbox') ? el.checked : el.value;
+            });
+
+            try {
+                // Salva como citopatologico_ID.json
+                const fh = await pastaHandle.getFileHandle(`citopatologico_${idArquivo}.json`, { create: true });
+                const w = await fh.createWritable();
+                await w.write(JSON.stringify(dados));
+                await w.close();
+                alert("Ficha Citopatológico salva com sucesso! (ID: " + idArquivo + ")");
+                setFormState('cito', 'saved');
+                atualizarContadores();
+            } catch (e) { alert("Erro ao salvar Cito: " + e); }
+        }
+
+        async function buscarGeral() {
+            if (!pastaHandle || !await verifyPermission(pastaHandle)) return alert("Conecte o banco!");
+            let idBusca = document.getElementById('buscaCpfGeral').value.replace(/\D/g, '');
+            if(!idBusca) return alert("Digite o CPF ou CNS");
+
+            try {
+                const fh = await pastaHandle.getFileHandle(`evolucao_${idBusca}.json`);
+                const file = await fh.getFile();
+                const dados = JSON.parse(await file.text());
+                aplicarDados(dados, 'area-unificada');
+                
+                // --- ATUALIZAÇÃO AUTOMÁTICA DA DATA/HORA PARA O MOMENTO ATUAL ---
+                document.getElementById('f2_data').value = getDataAtualFormatada();
+                document.getElementById('f2_hora').value = getHoraAtualFormatada();
+                
+                alert("Paciente encontrado (Geral)!");
+                setFormState('geral', 'saved'); 
+            } catch (e) {
+                alert("Paciente não encontrado com este ID (CPF/CNS).");
+                setFormState('geral', 'unsaved');
+            }
+        }
+
+        async function buscarCito() {
+            if (!pastaHandle || !await verifyPermission(pastaHandle)) return alert("Conecte o banco!");
+            let idBusca = document.getElementById('buscaCpfCito').value.replace(/\D/g, '');
+            if(!idBusca) return alert("Digite o CPF ou CNS");
+
+            try {
+                const fh = await pastaHandle.getFileHandle(`citopatologico_${idBusca}.json`);
+                const file = await fh.getFile();
+                const dados = JSON.parse(await file.text());
+                aplicarDados(dados, 'area-citopatologico');
+                
+                // Força a sincronização após carregar para garantir que Enfermagem receba dados se necessário
+                sincronizarFilantropicoParaEnfermagem();
+                
+                // --- ATUALIZAÇÃO AUTOMÁTICA DA DATA/HORA PARA O MOMENTO ATUAL ---
+                document.getElementById('cf_data').value = getDataAtualFormatada();
+                document.getElementById('cf_hora').value = getHoraAtualFormatada();
+                document.getElementById('enf_data_con').value = getDataAtualFormatada();
+
+                alert("Ficha carregada!");
+                setFormState('cito', 'saved');
+            } catch (e) {
+                alert("Nenhuma ficha encontrada para este ID (CPF/CNS).");
+                setFormState('cito', 'unsaved');
+            }
+        }
+
+        function aplicarDados(dados, areaId) {
+            for (const key in dados) {
+                const el = document.getElementById(key);
+                if (el && document.getElementById(areaId).contains(el)) {
+                    // VERIFICA SE É CAMPO DE DATA NASCIMENTO E SE ESTÁ EM ISO (AAAA-MM-DD)
+                    if(key.includes('_nasc') && /^\d{4}-\d{2}-\d{2}$/.test(dados[key])) {
+                        const [ano, mes, dia] = dados[key].split('-');
+                        el.value = `${dia}/${mes}/${ano}`;
+                    } else if(key.includes('_nasc') && /^\d{4}\/\d{2}\/\d{2}$/.test(dados[key])) {
+                         const [ano, mes, dia] = dados[key].split('/');
+                         el.value = `${dia}/${mes}/${ano}`;
+                    } else {
+                        if (el.type === 'checkbox') el.checked = dados[key];
+                        else el.value = dados[key];
+                    }
+                }
+            }
+        }
+
+        // --- NAVEGAÇÃO ---
+        function abrirFichaUnificada() {
+            document.getElementById('menu-selecao').style.display = 'none';
+            document.getElementById('area-unificada').classList.add('ativo');
+            setFormState('geral', 'unsaved'); 
+        }
+
+        function abrirFichaCitopatologico() {
+            document.getElementById('menu-selecao').style.display = 'none';
+            document.getElementById('area-citopatologico').classList.add('ativo');
+            setFormState('cito', 'unsaved'); 
+        }
+
+        function voltarMenu() {
+            document.getElementById('menu-selecao').style.display = 'flex';
+            document.querySelectorAll('.area-formulario').forEach(el => el.classList.remove('ativo'));
+            document.getElementById('form-db-area').style.display = 'none';
+            atualizarContadores();
+        }
+
+        function limparTudo(areaId) {
+            // LÓGICA ATUALIZADA: VERIFICAR SE ESTÁ SALVO
+            if(!formEstaSalvo) {
+                if(!confirm("Salvar documento antes de limpar?\n\nClique em OK para limpar sem salvar (os dados serão perdidos).\nClique em Cancelar para voltar e salvar.")) {
+                    return; // Cancela a limpeza
+                }
+            }
+
+            const container = document.getElementById(areaId);
+            container.querySelectorAll('input, select, textarea').forEach(el => {
+                // IGNORAR CAMPOS ESPECÍFICOS (PRESERVAR DEFAULTS)
+                if(el.id === 'f2_local' || el.id === 'f2_cr' || el.id === 'f1_comunidade' || 
+                   el.id === 'cf_local' || el.id === 'cf_cr' || el.id === 'cito_unidade_saude' || 
+                   el.id === 'enf_comunidade' || el.id.includes('tipo_doc')) {
+                    return;
+                }
+
+                if(el.type === 'checkbox') {
+                    // MANTER ITINERANTE MARCADO
+                    if(el.id === 'f2_itinerante' || el.id === 'cf_itinerante') {
+                        el.checked = true;
+                    } else {
+                        el.checked = false;
+                    }
+                } else {
+                    el.value = '';
+                }
+            });
+
+            // Restaura estado (considera limpo como não salvo para fins de edição, mas sem alerta pendente)
+            if(areaId === 'area-unificada') setFormState('geral', 'unsaved');
+            if(areaId === 'area-citopatologico') setFormState('cito', 'unsaved');
+            formEstaSalvo = true; // Define como salvo/seguro pois está limpo
+        }
+
+        // --- BANCO DE DADOS VISUAL ---
+        async function abrirBancoDados() {
+            if (!pastaHandle || !await verifyPermission(pastaHandle)) return alert("Conecte a pasta primeiro!");
+            document.getElementById('menu-selecao').style.display = 'none';
+            document.getElementById('form-db-area').style.display = 'block';
+            
+            const tbody = document.getElementById('db-table-body');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
+            listaPacientes = [];
+
+            // Varre arquivos
+            for await (const entry of pastaHandle.values()) {
+                if (entry.kind === 'file' && entry.name.endsWith('.json')) {
+                    let tipo = "";
+                    let cpf = "";
+                    if(entry.name.startsWith('evolucao_')) { tipo = "GERAL"; cpf = entry.name.replace('evolucao_','').replace('.json',''); }
+                    else if(entry.name.startsWith('citopatologico_')) { tipo = "CITO"; cpf = entry.name.replace('citopatologico_','').replace('.json',''); }
+                    
+                    if(tipo) {
+                        const file = await entry.getFile();
+                        const text = await file.text();
+                        let nome = "SEM NOME";
+                        let fone = ""; 
+
+                        try {
+                            const d = JSON.parse(text);
+                            if(tipo === "GERAL") {
+                                nome = d.f1_nome || d.f2_nome || "SEM NOME";
+                                fone = d.f1_fone || d.f2_fone || "";
+                            } else {
+                                // Ajuste para ler dos campos de Anexo (cf_ ou enf_) caso os antigos cito_ não existam
+                                nome = d.cf_nome || d.cito_nome || "SEM NOME";
+                                fone = d.cf_fone || d.cito_fone || "";
+                            }
+                        } catch(e){}
+
+                        listaPacientes.push({ tipo, cpf, nome, fone });
+                    }
+                }
+            }
+            // Ordena alfabeticamente
+            listaPacientes.sort((a,b) => a.nome.localeCompare(b.nome));
+            renderizarTabelaBanco(listaPacientes);
+        }
+
+        function renderizarTabelaBanco(lista) {
+            const tbody = document.getElementById('db-table-body');
+            tbody.innerHTML = '';
+            
+            if(lista.length === 0) { 
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum registro encontrado.</td></tr>'; 
+                return; 
+            }
+
+            lista.forEach(p => {
+                const tr = document.createElement('tr');
+                const badge = p.tipo === 'GERAL' ? '<span class="badge bg-success">Geral</span>' : '<span class="badge bg-danger">Cito</span>';
+                
+                // ADICIONA CLASSE ROSA SE FOR CITO
+                if(p.tipo === 'CITO') {
+                    tr.classList.add('tr-cito');
+                }
+
+                tr.innerHTML = `
+                    <td>${badge}</td>
+                    <td class="fw-bold">${p.cpf}</td>
+                    <td>${p.nome}</td>
+                    <td>${p.fone}</td>
+                    <td class="text-center" style="white-space: nowrap;">
+                        <button class="btn btn-primary btn-sm" onclick="carregarDoBanco('${p.cpf}', '${p.tipo}')" title="Abrir Ficha">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm ms-1" onclick="excluirPaciente('${p.cpf}', '${p.tipo}', '${p.nome.replace(/'/g, "\\'")}')" title="Excluir Definitivamente">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('db-total-registros').innerText = lista.length + " registros encontrados.";
+        }
+
+        async function excluirPaciente(cpf, tipo, nome) {
+            if (!confirm(`ATENÇÃO!\n\nVocê tem certeza que deseja EXCLUIR DEFINITIVAMENTE a ficha de:\n${nome} (ID: ${cpf})?\n\nEssa ação apagará o arquivo do computador e não pode ser desfeita.`)) {
+                return;
+            }
+            if (!pastaHandle) return alert("Erro: Pasta do banco não está conectada.");
+
+            const prefixo = (tipo === 'GERAL') ? 'evolucao_' : 'citopatologico_';
+            const nomeArquivo = `${prefixo}${cpf}.json`;
+
+            try {
+                await pastaHandle.removeEntry(nomeArquivo);
+                listaPacientes = listaPacientes.filter(p => !(p.cpf === cpf && p.tipo === tipo));
+                filtrarTabelaBanco();
+                atualizarContadores();
+                alert("Ficha excluída com sucesso!");
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao excluir. Verifique se o arquivo existe.\n\nDetalhe: " + e.message);
+            }
+        }
+
+        function filtrarTabelaBanco() {
+            const t = document.getElementById('db-search').value;
+            const f = listaPacientes.filter(p => p.cpf.includes(t));
+            renderizarTabelaBanco(f);
+        }
+
+        function carregarDoBanco(cpf, tipo) {
+            document.getElementById('form-db-area').style.display = 'none';
+            if(tipo === 'GERAL') {
+                abrirFichaUnificada();
+                document.getElementById('buscaCpfGeral').value = cpf;
+                buscarGeral();
+            } else {
+                abrirFichaCitopatologico();
+                document.getElementById('buscaCpfCito').value = cpf;
+                buscarCito();
+            }
+        }
+
+        // --- CEP E IDADE ---
+        function calcularIdade(data, outputId) {
+            if(!data) return;
+            // Adaptação para aceitar data BR (DD/MM/AAAA) ou ISO (AAAA-MM-DD)
+            let nasc;
+            if (data.includes('/')) {
+                const partes = data.split('/');
+                nasc = new Date(partes[2], partes[1] - 1, partes[0]);
+            } else {
+                nasc = new Date(data);
+            }
+
+            const hoje = new Date();
+            let idade = hoje.getFullYear() - nasc.getFullYear();
+            const m = hoje.getMonth() - nasc.getMonth();
+            if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) idade--;
+            document.getElementById(outputId).value = idade;
+        }
+
+        async function buscarCep(cep, prefixo) {
+            cep = cep.replace(/\D/g, '');
+            if(cep.length === 8) {
+                try {
+                    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                    const d = await r.json();
+                    if(!d.erro) {
+                        if(prefixo === 'f2') {
+                            document.getElementById('f2_end').value = d.logradouro;
+                            document.getElementById('f2_bairro').value = d.bairro;
+                            document.getElementById('f2_cidade').value = d.localidade;
+                            document.getElementById('f2_uf').value = d.uf;
+                            document.getElementById('f1_end').value = `${d.logradouro}, ${d.bairro}, ${d.localidade}-${d.uf}`;
+                        } else if(prefixo === 'cf') {
+                            // Preenche Filantrópico (Cito)
+                            if(document.getElementById('cf_end')) document.getElementById('cf_end').value = d.logradouro;
+                            if(document.getElementById('cf_bairro')) document.getElementById('cf_bairro').value = d.bairro;
+                            if(document.getElementById('cf_cidade')) document.getElementById('cf_cidade').value = d.localidade;
+                            if(document.getElementById('cf_uf')) document.getElementById('cf_uf').value = d.uf;
+                            
+                            // Dispara a sincronização para preencher a Enfermagem com esses novos dados
+                            sincronizarFilantropicoParaEnfermagem();
+                        }
+                    }
+                } catch(e){}
+            }
+        }
+
+        function preencherTabelas() {
+            const sv1 = [
+                "Ultrassonografia de Abd. Superior", "Ultrassonografia de Abd. Total", "US Aparelho Urinário (Rins e Bexiga)",
+                "Ultrassonografia de Articulação (Partes moles)", "Ultrassonografia de Testículos", "Ultrassonografia de Mamária Bilateral",
+                "Ultrassonografia de Próstata", "Ultrassonografia de Tireóide", "Ultrassonografia Obstétrica", "Ultrassonografia de Pélvis (Ginecológica)",
+                "Ultrassonografia Transvaginal", "Ultrassonografia de Pé D", "Ultrassonografia de Pé E", "Ultrassonografia de Ombro D",
+                "Ultrassonografia de Ombro E", "Ultrassonografia de Pescoço", "Ultrassonografia de Axila D", "Ultrassonografia de Axila E",
+                "Ultrassonografia de Braço D", "Ultrassonografia de Braço E", "Ultrassonografia de Punho D", "Ultrassonografia de Punho E",
+                "Ultrassonografia de Mão D", "Ultrassonografia de Mão E", "Ultrassonografia de Coxa D", "Ultrassonografia de Coxa E",
+                "Ultrassonografia Coluna Cervical", "Ultrassonografia Coluna Lombar", "Ultrassonografia de Tornozelo D", "Ultrassonografia de Tornozelo E",
+                "Ultrassonografia de Joelho D", "Ultrassonografia de Joelho E", "Ultrassonografia de Cotovelo D", "Ultrassonografia de Cotovelo E",
+                "Triagem Oftalmológica", "Tonometria", "Mapeamento de Retina", "Fundoscopia", "Curva Diária de Pressão Ocular CDPO"
+            ];
+
+            const sv2 = ["Consulta Serviço Social", "Consulta Enfermagem", "Consulta Nutricional", "Consulta Psicologia", "Consulta Cardiologia", "Consulta Clínica Médica", "Consulta Gastropediatria", "Consulta Ginecologia", "Consulta Mastologia", "Consulta Obstetrícia", "Consulta Oftalmologia", "Consulta Pediatria", "Consulta Urologia", "Consulta Ortopedia", "Consulta Pneumologia", "Atendimento Enfermagem", "Avaliação Física", "Coleta de material cérvico vaginal", "Eletrocardiograma", "Glicemia", "Preventivo"];
+            
+            const comp = ["Curso", "Entrevistas / Questionários", "Oficina", "Oficina de Enfermagem", "Oficina de Nutrição", "Oficina de Odontologia", "Oficina de Psicologia", "Oficina de Educador Fisico", "Oficina de Serviço Social", "Palestra", "Palestra de Enfermagem", "Palestra de Nutrição", "Palestra de Odontologia", "Palestra de Psicologia", "Palestra de Educador Fisico", "Palestra de Serviço Social", "Visita Domiciliar / Técnica"];
+
+            let h1=""; sv1.forEach(s=>h1+=`<tr><td><div class="check-item"><input type="checkbox"> ${s}</div></td><td></td><td></td></tr>`);
+            document.getElementById('tabela-servicos-1').innerHTML = h1;
+
+            let h2=""; sv2.forEach(s=>h2+=`<tr><td><div class="check-item"><input type="checkbox"> ${s}</div></td><td></td><td></td></tr>`);
+            document.getElementById('tabela-servicos-2').innerHTML = h2;
+
+            let h3=""; comp.forEach(s=>h3+=`<tr><td><div class="check-item"><input type="checkbox"> ${s}</div></td><td></td><td></td><td></td></tr>`);
+            for(let i=0;i<3;i++) h3+=`<tr><td><div class="check-item"><input type="checkbox"> &nbsp;</div></td><td></td><td></td><td></td></tr>`;
+            document.getElementById('tabela-complementares').innerHTML = h3;
+
+            // --- POPULAR TABELAS DA FICHA ANEXA AO CITO (cf_) ---
+            if(document.getElementById('cf_tabela_servicos_1')) {
+                document.getElementById('cf_tabela_servicos_1').innerHTML = h1;
+                document.getElementById('cf_tabela_servicos_2').innerHTML = h2;
+                document.getElementById('cf_tabela_complementares').innerHTML = h3;
+            }
+        }
+
+        // Atalho de impressão
+        document.addEventListener('keydown', function(event) {
+            if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'p') {
+                event.preventDefault(); 
+                window.print(); 
+            }
+        });
+    </script>
+</body>
+</html>
